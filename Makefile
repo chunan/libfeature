@@ -9,7 +9,7 @@ MACHINE = $(shell uname -m)
 SRC = feature.cpp
 OBJ = $(addprefix obj/$(MACHINE)/,$(SRC:.cpp=.o))
 
-TARGET = lib/$(MACHINE)/feature.a
+TARGET = lib/$(MACHINE)/libfeature.a
 
 vpath %.cpp src
 vpath %.o obj/$(MACHINE)
@@ -28,7 +28,7 @@ debug: $(TARGET)
 %.d: %.cpp
 	$(CC) -M $(CXXFLAGS) $< > $@
 
-lib/$(MACHINE)/feature.a: \
+lib/$(MACHINE)/libfeature.a: \
 	obj/$(MACHINE)/feature.o
 	$(AR) rucs $@ $^
 

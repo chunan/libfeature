@@ -205,5 +205,5 @@ void Feature::DumpData() const {
   printf("(dT, dF) = (%gs, %gHz)\n", dT_, dF_);
   printf("window = %gs\n", window_);
   printf("PRIVATE:\n");
-  data_.DumpData();
+  cout << data_;
 }

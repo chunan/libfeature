@@ -6,204 +6,170 @@
 
 using namespace std;
 
-const int sizeInt = sizeof(int);
-const int sizeFloat = sizeof(float);
-
-// Feature constructor
-Feature::Feature(FILE *fd, char type) {
-  Init();
+bool DenseFeature::LoadFile(const string& filename, char type) {/*{{{*/
+  FILE *fd = FOPEN(filename.c_str(), "r");
+  bool ret = false;
   if (type == 'a') {
-    LoadFromAscii(fd);
-  } else if (type == 'b') {
-    LoadFromBin(fd);
+    ret = LoadFromAscii(fd);
+  } else if (type == 'h') {
+    ret = LoadFromHtk(fd);
+  } else {
+    assert(false);
   }
-}
+  return ret;
+}/*}}}*/
 
-Feature::Feature(string filename) {
-  Init();
-  LoadFile(filename);
-}
-
-void Feature::Init() {
-  fname_.clear();
-  dT_ = 0.0;
-  dF_ = 0.0;
-  window_ = 0.0;
-}
-
-bool Feature::ResetFeature() {
-  Init();
-  return true;
-}
-
-bool Feature::LoadFile(const string& filename) {
+bool DenseFeature::LoadFile(const string& filename) {/*{{{*/
   /* Check for extension of the file */
-  size_t found = filename.find_last_of(".");
-  string ext = filename.substr(found + 1);
+  string ext = GetExtension(filename);
 
   FILE *fd = FOPEN(filename.c_str(), "r");
-  if (ext == "mfc" || ext == "fbank" || ext == "plp") {
-    LoadFromHTK(fd);
-  }
-  else if (ext == "spec") {
-    LoadFromBin(fd);
-  }
-  else{
+  if (ext == "mfc" || ext == "fbank" || ext == "plp" || ext == "gp") {
+    LoadFromHtk(fd);
+  } else {
     ErrorExit(__FILE__, __LINE__, 1,"Unknown extension `%s'\n", ext.c_str());
   }
   fclose(fd);
   fname_ = filename;
   return true;
-}
+}/*}}}*/
 
 
 // Feature I/O
-bool Feature::WriteToBin(FILE *fo_bin) {
-  assert(data_[0] != NULL);
-  size_t s_write;
-  int ival;
+bool DenseFeature::WriteToHtk(FILE *fp) {
 
-  ival = LT();
-  s_write = fwrite(&ival, sizeInt, 1, fo_bin);
+  assert(data_.nrow() > 0 && data_.ncol() > 0);
+
+  int s_write;
+  int32_t numSamp, sampPeriod;
+  int16_t sampSize;
+
+  numSamp = LT();
+  sampPeriod = static_cast<int32_t>(dT_ / 1e-7);
+  sampSize = 4 * LF();
+
+  s_write = fwrite(&numSamp, 4, 1, fp);
   assert(s_write == 1);
-  ival = LF();
-  s_write = fwrite(&ival, sizeInt, 1, fo_bin);
+  s_write = fwrite(&sampPeriod, 4, 1, fp);
   assert(s_write == 1);
-  s_write = fwrite(&dT_, sizeFloat, 1, fo_bin);
+  s_write = fwrite(&sampSize, 2, 1, fp);
   assert(s_write == 1);
-  s_write = fwrite(&dF_, sizeFloat, 1, fo_bin);
+  s_write = fwrite(&parmKind_, 2, 1, fp);
   assert(s_write == 1);
-  s_write = fwrite(&window_, sizeFloat, 1, fo_bin);
-  assert(s_write == 1);
-  s_write = fwrite(data_[0], sizeFloat, LT() * LF(), fo_bin);
-  assert(static_cast<int>(s_write) == LT() * LF());
+
+  for (int t = 0; t < LT(); ++t) {
+    s_write = fwrite(&data_[t][0], 4, LF(), fp);
+    assert(s_write == LF());
+  }
   return true;
 }
 
-bool Feature::LoadFromBin(FILE *fi_bin) {
-  size_t s_read;
-  int len_t, len_f;
-  s_read = fread(&len_t, sizeInt, 1, fi_bin);
-  assert(s_read == 1);
-  s_read = fread(&len_f, sizeInt, 1, fi_bin);
-  assert(s_read == 1);
-  s_read = fread(&dT_, sizeFloat, 1, fi_bin);
-  assert(s_read == 1);
-  s_read = fread(&dF_, sizeFloat, 1, fi_bin);
-  assert(s_read == 1);
-  s_read = fread(&window_, sizeFloat, 1, fi_bin);
-  assert(s_read == 1);
-  data_.Resize(len_t, len_f);
-  s_read = fread(data_[0], sizeFloat, LT() * LF(), fi_bin);
-  assert(static_cast<int>(s_read) == LT() * LF());
-  return true;
-}
+bool DenseFeature::LoadFromHtk(FILE *fp) {/*{{{*/
 
-bool Feature::WriteToAscii(FILE *fo_ascii) {
-  assert(data_[0] != NULL);
-  bool ret = true;
-  if (fprintf(fo_ascii, "LT=%d, LF=%d, dT=%f, dF=%f, window=%f\n",
-              LT(), LF(), dT_, dF_, window_) < 0) ret = false;
-  for (int t = 0; t < LT(); ++t) {
-    if (fprintf(fo_ascii, "%.2f", data_(t, 0)) < 0)
-      ret = false;
-    for (int f = 1; f < LF(); ++f) {
-      if (fprintf(fo_ascii, "\t%.2f", data_(t, f)) < 0) ret = false;
-    }
-    if (fprintf(fo_ascii, "\n") < 0) ret = false;
-  }
-  return ret;
-}
-
-bool Feature::LoadFromAscii(FILE *fi_ascii) {
-  bool ret = true;
-  int len_t, len_f;
-  if (fscanf(fi_ascii, "LT=%d, LF=%d, dT=%f, dF=%f, window=%f\n",
-             &len_t, &len_f, &dT_, &dF_, &window_) < 0) {
-    ret = false;
-  }
-
-  data_.Resize(len_t, len_f);
-  for (int t = 0; t < LT(); ++t) {
-    if (fscanf(fi_ascii, "%f", &data_[t][0]) != 1)
-      ret = false;
-    for (int f = 1; f < LF(); ++f) {
-      if (fscanf(fi_ascii, "\t%f", &data_[t][f]) != 1) {
-        ret = false;
-      }
-    }
-    if (fscanf(fi_ascii, "\n") != 0) ret = false;
-  }
-  return ret;
-}
-
-bool Feature::LoadFromHTK(FILE *fi_htk) {
-
-  int sampPeriod = 0, sampSize = 0, parmKind = 0;
-  int len_t, len_f;
+  int32_t numSamp, sampPeriod;
+  int16_t sampSize;
+  int numDim, valSize;
   size_t s_read;
 
-  s_read = fread(&len_t, 4, 1, fi_htk);
+  s_read = fread(&numSamp, 4, 1, fp);
   assert(s_read == 1);
-  s_read = fread(&sampPeriod, 4, 1, fi_htk);
+  s_read = fread(&sampPeriod, 4, 1, fp);
   assert(s_read == 1);
-  s_read = fread(&sampSize, 2, 1, fi_htk);
+  s_read = fread(&sampSize, 2, 1, fp);
   assert(s_read == 1);
-  s_read = fread(&parmKind, 2, 1, fi_htk);
+  s_read = fread(&parmKind_, 2, 1, fp);
   assert(s_read == 1);
 
-  if ((02000 & parmKind) > 0) {
-    len_f = sampSize / 2;
-    sampSize = 2;
+  if ((02000 & parmKind_) > 0) {
+    valSize = 2;
   } else {
-    len_f = sampSize / 4;
-    sampSize = 4;
+    valSize = 4;
   }
+  numDim = sampSize / valSize;
 
   dT_ = static_cast<float>(sampPeriod) * 1e-7;
-  dF_ = window_ = 0.0;
 
-  data_.Resize(len_t, len_f);
+  data_.resize(numSamp, numDim);
   /* Uncompressed type */
-  if (sampSize == 4) {
-    if (sizeFloat == sampSize) {
-      s_read = fread(data_[0], sampSize, len_t * len_f, fi_htk);
-      assert(static_cast<int>(s_read) == len_t * len_f);
-    } else {
-      unsigned totnum = len_t * len_f;
-      float *ptr = new float [totnum];
-      assert(fread(ptr, sampSize, totnum, fi_htk) == totnum);
-      for (unsigned int i = 0; i < totnum; i++) {
-        data_(0, i) = static_cast<float>(ptr[i]);
+  if (valSize == 4) {
+    if (sizeof(float) == valSize) {
+      for (int t = 0; t < numSamp; ++t) {
+        s_read = fread(&data_[t][0], valSize, numDim, fp);
+        assert(static_cast<int>(s_read) == numDim);
       }
-      delete [] ptr;
+    } else {
+      ErrorExit(__FILE__, __LINE__, 1, "sizeof(float) != 4\n");
     }
   }
   /* Compressed type */
-  else if (sampSize == 2) {
-    if (sizeInt == sampSize) {
-      int **ptr = mem_op<int>::new_2d_array(len_t, len_f);
-      s_read = fread(data_[0], sizeInt, len_t*len_f, fi_htk);
-      assert(static_cast<int>(s_read) == len_t * len_f);
-      for (int t = 0; t < len_t; t++) {
-        for (int f = 0; f < len_f; f++) {
-          data_(t, f) = static_cast<float>(ptr[t][f]);
-        }
+  else if (valSize == 2) {
+    int tot_val = numSamp * numDim;
+    vector<int16_t> ptr(tot_val);
+    s_read = fread(&ptr[0], 2, tot_val, fp);
+    assert(static_cast<int>(s_read) == tot_val);
+
+    for (int t = 0; t < numSamp; t++) {
+      for (int f = 0; f < numDim; f++) {
+        data_(t, f) = static_cast<float>(ptr[t * numSamp + f]);
       }
-      mem_op<int>::delete_2d_array(&ptr);
-    }
-    else {
-      // Not implement yet.
-      ErrorExit(__FILE__, __LINE__, 1,"Int size =/= 2, not implement yet\n");
     }
   }
   return true;
+}/*}}}*/
+
+bool DenseFeature::WriteToAscii(FILE *fp) {
+
+  assert(data_.nrow() > 0 && data_.ncol() > 0);
+
+  bool ret = true;
+  if (fprintf(fp, "LT=%d, LF=%d, dT=%f\n", LT(), LF(), dT_) < 0)
+    ret = false;
+  for (int t = 0; t < LT(); ++t) {
+    if (fprintf(fp, "%.2f", data_(t, 0)) < 0) ret = false;
+    for (int f = 1; f < LF(); ++f) {
+      if (fprintf(fp, "\t%.2f", data_(t, f)) < 0) ret = false;
+    }
+    if (fprintf(fp, "\n") < 0) ret = false;
+  }
+  return ret;
 }
 
-void Feature::DumpData() const {
+bool DenseFeature::LoadFromAscii(FILE *fp) {
+  bool ret = true;
+  int len_t, len_f;
+  if (fscanf(fp, "LT=%d, LF=%d, dT=%f\n",
+             &len_t, &len_f, &dT_) < 0) {
+    ret = false;
+  }
+
+  data_.resize(len_t, len_f);
+  for (int t = 0; t < LT(); ++t) {
+    if (fscanf(fp, "%f", &data_[t][0]) != 1)
+      ret = false;
+    for (int f = 1; f < LF(); ++f) {
+      if (fscanf(fp, "\t%f", &data_[t][f]) != 1) {
+        ret = false;
+      }
+    }
+    if (fscanf(fp, "\n") != 0) ret = false;
+  }
+  return ret;
+}
+
+void DenseFeature::DumpData() const {
   printf("DATA:\n");
-  printf("(dT, dF) = (%gs, %gHz)\n", dT_, dF_);
-  printf("window = %gs\n", window_);
+  printf("(LT, LF, dT) = (%d, %d, %g)\n", LT(), LF(), dT_);
   printf("PRIVATE:\n");
   cout << data_;
 }
+
+
+const float SparseFeature::operator()(int t, int f) const {
+  typeof(data_[t].begin()) itr = data_[t].find(f);
+  if (itr == data_[t].end()) {
+    return 0;
+  } else {
+    return itr->second;
+  }
+}
+

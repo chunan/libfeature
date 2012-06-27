@@ -6,7 +6,7 @@
 
 using namespace std;
 
-bool DenseFeature::LoadFile(const string& filename, char type) {/*{{{*/
+bool DenseFeature::LoadFile(const string filename, char type) {/*{{{*/
   FILE *fd = FOPEN(filename.c_str(), "r");
   bool ret = false;
   if (type == 'a') {
@@ -19,7 +19,7 @@ bool DenseFeature::LoadFile(const string& filename, char type) {/*{{{*/
   return ret;
 }/*}}}*/
 
-bool DenseFeature::LoadFile(const string& filename) {/*{{{*/
+bool DenseFeature::LoadFile(const string filename) {/*{{{*/
   /* Check for extension of the file */
   string ext = GetExtension(filename);
 

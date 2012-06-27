@@ -35,19 +35,19 @@ class DenseFeature : public Feature {
   public:
     /* Ctor */
     DenseFeature() { Init(); }
-    DenseFeature(const string& filename) {
+    DenseFeature(const string filename) {
       Init();
       LoadFile(filename);
     }
-    DenseFeature(const string& filename, char type) {
+    DenseFeature(const string filename, char type) {
       Init();
       LoadFile(filename, type);
     }
     ~DenseFeature() {}
 
     /* I/O */
-    bool LoadFile(const string& filename);
-    bool LoadFile(const string& filename, char type);
+    bool LoadFile(const string filename);
+    bool LoadFile(const string filename, char type);
     bool WriteToAscii(FILE *fp);
     bool WriteToHtk(FILE *fp);
     void DumpData() const;

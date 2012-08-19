@@ -6,18 +6,7 @@
 
 using namespace std;
 
-bool DenseFeature::LoadFile(const string filename, char type) {/*{{{*/
-  FILE *fd = FOPEN(filename.c_str(), "r");
-  bool ret = false;
-  if (type == 'a') {
-    ret = LoadFromAscii(fd);
-  } else if (type == 'h') {
-    ret = LoadFromHtk(fd);
-  } else {
-    assert(false);
-  }
-  return ret;
-}/*}}}*/
+/* Feature I/O */
 
 bool DenseFeature::LoadFile(const string filename) {/*{{{*/
   /* Check for extension of the file */
@@ -34,9 +23,37 @@ bool DenseFeature::LoadFile(const string filename) {/*{{{*/
   return true;
 }/*}}}*/
 
+bool DenseFeature::LoadFile(const string filename, char type) {/*{{{*/
+  FILE *fd = FOPEN(filename.c_str(), "r");
+  bool ret = false;
+  if (type == 'a') {
+    ret = LoadFromAscii(fd);
+  } else if (type == 'h') {
+    ret = LoadFromHtk(fd);
+  } else {
+    assert(false);
+  }
+  return ret;
+}/*}}}*/
 
-// Feature I/O
-bool DenseFeature::WriteToHtk(FILE *fp) {
+bool DenseFeature::WriteToAscii(FILE *fp) const {/*{{{*/
+
+  assert(data_.nrow() > 0 && data_.ncol() > 0);
+
+  bool ret = true;
+  if (fprintf(fp, "LT=%d, LF=%d, dT=%f\n", LT(), LF(), dT_) < 0)
+    ret = false;
+  for (int t = 0; t < LT(); ++t) {
+    if (fprintf(fp, "%.2f", data_(t, 0)) < 0) ret = false;
+    for (int f = 1; f < LF(); ++f) {
+      if (fprintf(fp, "\t%.2f", data_(t, f)) < 0) ret = false;
+    }
+    if (fprintf(fp, "\n") < 0) ret = false;
+  }
+  return ret;
+}/*}}}*/
+
+bool DenseFeature::WriteToHtk(FILE *fp) const {/*{{{*/
 
   assert(data_.nrow() > 0 && data_.ncol() > 0);
 
@@ -62,7 +79,14 @@ bool DenseFeature::WriteToHtk(FILE *fp) {
     assert(s_write == LF());
   }
   return true;
-}
+}/*}}}*/
+
+void DenseFeature::DumpData() const {/*{{{*/
+  printf("DATA:\n");
+  printf("(LT, LF, dT) = (%d, %d, %g)\n", LT(), LF(), dT_);
+  printf("PRIVATE:\n");
+  cout << data_;
+}/*}}}*/
 
 bool DenseFeature::LoadFromHtk(FILE *fp) {/*{{{*/
 
@@ -117,24 +141,7 @@ bool DenseFeature::LoadFromHtk(FILE *fp) {/*{{{*/
   return true;
 }/*}}}*/
 
-bool DenseFeature::WriteToAscii(FILE *fp) {
-
-  assert(data_.nrow() > 0 && data_.ncol() > 0);
-
-  bool ret = true;
-  if (fprintf(fp, "LT=%d, LF=%d, dT=%f\n", LT(), LF(), dT_) < 0)
-    ret = false;
-  for (int t = 0; t < LT(); ++t) {
-    if (fprintf(fp, "%.2f", data_(t, 0)) < 0) ret = false;
-    for (int f = 1; f < LF(); ++f) {
-      if (fprintf(fp, "\t%.2f", data_(t, f)) < 0) ret = false;
-    }
-    if (fprintf(fp, "\n") < 0) ret = false;
-  }
-  return ret;
-}
-
-bool DenseFeature::LoadFromAscii(FILE *fp) {
+bool DenseFeature::LoadFromAscii(FILE *fp) {/*{{{*/
   bool ret = true;
   int len_t, len_f;
   if (fscanf(fp, "LT=%d, LF=%d, dT=%f\n",
@@ -154,22 +161,15 @@ bool DenseFeature::LoadFromAscii(FILE *fp) {
     if (fscanf(fp, "\n") != 0) ret = false;
   }
   return ret;
-}
-
-void DenseFeature::DumpData() const {
-  printf("DATA:\n");
-  printf("(LT, LF, dT) = (%d, %d, %g)\n", LT(), LF(), dT_);
-  printf("PRIVATE:\n");
-  cout << data_;
-}
+}/*}}}*/
 
 
-const float SparseFeature::operator()(int t, int f) const {
+const float SparseFeature::operator()(int t, int f) const {/*{{{*/
   typeof(data_[t].begin()) itr = data_[t].find(f);
   if (itr == data_[t].end()) {
     return 0;
   } else {
     return itr->second;
   }
-}
+}/*}}}*/
 

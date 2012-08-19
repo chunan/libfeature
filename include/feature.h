@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <string>
 #include <map>
-#include "ugoc_utility.h"
+#include "utility.h"
 
 using namespace std;
 
@@ -48,8 +48,8 @@ class DenseFeature : public Feature {
     /* I/O */
     bool LoadFile(const string filename);
     bool LoadFile(const string filename, char type);
-    bool WriteToAscii(FILE *fp);
-    bool WriteToHtk(FILE *fp);
+    bool WriteToAscii(FILE *fp) const;
+    bool WriteToHtk(FILE *fp) const;
     void DumpData() const;
     /* accessors */
     int LT() const { return data_.nrow(); }
@@ -57,9 +57,8 @@ class DenseFeature : public Feature {
     void resize(const unsigned num_samp, const unsigned num_dim) {
       data_.resize(num_samp, num_dim);
     }
-    TwoDimVector<float>& Data() { return data_; }
     const TwoDimVector<float>& Data() const { return data_; }
-
+    TwoDimVector<float>& Data() { return data_; }
     const float operator()(int t, int f) const { return data_(t, f); }
     float& operator()(int t, int f) { return data_(t, f); }
     const float* operator[](int t) const { return &data_[t][0]; }

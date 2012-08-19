@@ -1,8 +1,8 @@
 CC = g++
 CXX = g++
 
-CXXFLAGS = -Iinclude -I../ugoc_utility/include
-LDFLAG = -L../ugoc_utility/lib/$(MACHINE)
+CXXFLAGS = -Iinclude -I../libutility/include
+LDFLAG = -L../libutility/lib/$(MACHINE)
 
 MACHINE = $(shell uname -m)
 

@@ -33,6 +33,8 @@ bool DenseFeature::LoadFile(const string filename, char type) {/*{{{*/
   } else {
     assert(false);
   }
+  fclose(fd);
+  fname_ = filename;
   return ret;
 }/*}}}*/
 

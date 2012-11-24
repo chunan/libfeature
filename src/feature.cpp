@@ -15,6 +15,8 @@ bool DenseFeature::LoadFile(const string filename) {/*{{{*/
   FILE *fd = FOPEN(filename.c_str(), "r");
   if (ext == "mfc" || ext == "fbank" || ext == "plp" || ext == "gp") {
     LoadFromHtk(fd);
+  } else if (ext == "feat") {
+    LoadFromAscii(fd);
   } else {
     ErrorExit(__FILE__, __LINE__, 1,"Unknown extension `%s'\n", ext.c_str());
   }

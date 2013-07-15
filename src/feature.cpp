@@ -138,7 +138,7 @@ bool DenseFeature::LoadFromHtk(FILE *fp) {/*{{{*/
 
     for (int t = 0; t < numSamp; t++) {
       for (int f = 0; f < numDim; f++) {
-        data_(t, f) = static_cast<float>(ptr[t * numSamp + f]);
+        data_(t, f) = static_cast<float>(ptr[t * numDim + f]);
       }
     }
   }

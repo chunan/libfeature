@@ -20,7 +20,7 @@ class Feature {
     virtual void resize(const unsigned num_samp, const unsigned num_dim) = 0;
   protected:
     Feature() {};
-    Feature(const Feature& r) {};
+//    Feature(const Feature& r) {};
     virtual void Init() {
       fname_.clear();
       dT_ = 0.0;
@@ -43,6 +43,9 @@ class DenseFeature : public Feature {
       Init();
       LoadFile(filename, type);
     }
+    DenseFeature(const DenseFeature &f) : Feature(f) {
+		data_ = f.Data();
+	}
     ~DenseFeature() {}
 
     /* I/O */

@@ -44,8 +44,8 @@ class DenseFeature : public Feature {
       LoadFile(filename, type);
     }
     DenseFeature(const DenseFeature &f) : Feature(f) {
-		data_ = f.Data();
-	}
+      data_ = f.Data();
+    }
     ~DenseFeature() {}
 
     /* I/O */
